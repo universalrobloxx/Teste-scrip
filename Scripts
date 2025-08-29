@@ -8,18 +8,11 @@ Frame.Size = UDim2.new(0.5, 0, 0.12, 0)
 Frame.Position = UDim2.new(0.25, 0, 0.44, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Frame.BorderSizePixel = 0
-Frame.ClipsDescendants = true
 
 local Bar = Instance.new("Frame", Frame)
 Bar.Size = UDim2.new(0, 0, 1, 0)
 Bar.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 Bar.BorderSizePixel = 0
-
-local UIGradient = Instance.new("UIGradient", Bar)
-UIGradient.Color = ColorSequence.new{
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 60, 60)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 150, 0))
-}
 
 local Text = Instance.new("TextLabel", Frame)
 Text.Size = UDim2.new(1, 0, 1, 0)
@@ -35,7 +28,7 @@ for i = 0, 100 do
 	task.wait(0.03)
 end
 
-task.wait(0.6)
+task.wait(0.5)
 ScreenGui:Destroy()
 
 local mainGui = Instance.new("ScreenGui", gui)
@@ -49,73 +42,37 @@ button.TextColor3 = Color3.fromRGB(255,255,255)
 button.BackgroundColor3 = Color3.fromRGB(30,30,30)
 button.BorderSizePixel = 0
 
-local gradient = Instance.new("UIGradient", button)
-gradient.Color = ColorSequence.new{
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 50)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 120, 0))
-}
+local function spawnPatch(position, i, total)
+	local patch = Instance.new("Part")
+	patch.Size = Vector3.new(4, 0.5, 4)
+	patch.Anchored = true
+	patch.CanCollide = false
+	patch.Transparency = 1
+	patch.Position = position
+	patch.Name = "VISUAL_PATCH_"..i
+	patch.Parent = workspace
+
+	local color1 = Color3.fromHSV(i/total,1,1)
+	local color2 = Color3.fromHSV((i/total + 0.1)%1,1,1)
+	local gradient = Instance.new("SurfaceAppearance", patch)
+	gradient.ColorMap = ColorSequence.new({ColorSequenceKeypoint.new(0,color1), ColorSequenceKeypoint.new(1,color2)})
+
+	for t = 0, 1, 0.05 do
+		patch.Transparency = 1-t
+		task.wait(0.02)
+	end
+end
 
 button.MouseButton1Click:Connect(function()
-	local ok, patchesFolder = pcall(function()
-		return game:GetService("ReplicatedStorage"):WaitForChild("GrowAGardenPatches", 5)
-	end)
-	if not ok or not patchesFolder then return end
-
-	local char = player.Character or player.CharacterAdded:Wait()
-	local hrp = char:FindFirstChild("HumanoidRootPart")
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 	local origin = hrp.Position
-	local PATCHES = patchesFolder:GetChildren()
-	local count = #PATCHES
 	local radius = 12
+	local patchesCount = 8
 
-	local function ringPositions(center, r, n)
-		local t = {}
-		for i = 1, n do
-			local ang = (i / n) * math.pi * 2
-			local x = center.X + math.cos(ang) * r
-			local z = center.Z + math.sin(ang) * r
-			table.insert(t, Vector3.new(x, center.Y, z))
-		end
-		return t
-	end
-
-	local positions = ringPositions(origin, radius, count)
-	for i, patch in ipairs(PATCHES) do
-		local pos = positions[i]
-		local cloned = patch:Clone()
-		for _, desc in ipairs(cloned:GetDescendants()) do
-			if desc:IsA("Script") or desc:IsA("LocalScript") then
-				desc:Destroy()
-			end
-			if desc:IsA("BasePart") then
-				desc.Anchored = true
-				desc.CanCollide = false
-			end
-		end
-		local wrapper = Instance.new("Model")
-		wrapper.Name = "VISUAL_" .. (patch.Name or ("Patch"..i))
-		cloned.Parent = wrapper
-		for _, v in ipairs(wrapper:GetDescendants()) do
-			if v:IsA("BasePart") then
-				v.Position = pos + Vector3.new(0, (v.Size.Y/2), 0)
-			end
-		end
-		wrapper.Parent = workspace
-		task.spawn(function()
-			local parts = {}
-			for _, v in ipairs(wrapper:GetDescendants()) do
-				if v:IsA("BasePart") then
-					table.insert(parts, v)
-					v.Transparency = 1
-				end
-			end
-			for step = 1, 10 do
-				for _, p in ipairs(parts) do
-					p.Transparency = 1 - (step / 10)
-				end
-				task.wait(0.03)
-			end
-		end)
+	for i = 1, patchesCount do
+		local angle = (i/patchesCount)*math.pi*2
+		local pos = origin + Vector3.new(math.cos(angle)*radius, 0, math.sin(angle)*radius)
+		spawnPatch(pos, i, patchesCount)
 	end
 end)
